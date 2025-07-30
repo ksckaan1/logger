@@ -1,5 +1,11 @@
 # ksckaan1/logger
 
+[![tag](https://img.shields.io/github/release/ksckaan1/logger.svg)](https://github.com/ksckaan1/logger/releases)
+![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.24.5-%23007d9c)
+[![Go report](https://goreportcard.com/badge/github.com/ksckaan1/logger)](https://goreportcard.com/report/github.com/ksckaan1/logger)
+[![Contributors](https://img.shields.io/github/contributors/ksckaan1/logger)](https://github.com/ksckaan1/logger/graphs/contributors)
+[![LICENSE](https://img.shields.io/badge/LICENCE-MIT-orange?style=flat)](./LICENSE)
+
 A simple, fast, and highly configurable Go logging package. This package leverages zerolog for high-performance logging, lumberjack for log file rotation, and can be integrated with OpenTelemetry for distributed tracing.
 
 ## Features
