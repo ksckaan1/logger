@@ -124,6 +124,24 @@ sublg.Info(ctx, "this is an info message")
 2025-07-31T02:23:17+03:00 INF logger_test.go:39 > this is an info message service=my-service/sub-service
 ```
 
+### Configuration And Environment Variables
+
+| Config           | Description                                   | Options                                                                  | Default                    | Environment variable         |
+| ---------------- | --------------------------------------------- | ------------------------------------------------------------------------ | -------------------------- | ---------------------------- |
+| ServiceName      | Service name that will be added to the log    | can be any string                                                        | `unnamed-service`          | `LOGGER_SERVICE_NAME`        |
+| Output           | Output defines where the log will be written. | `stdout`, `stderr`, `file`. It can be multiple values separated by comma | `stdout`                   | `LOGGER_OUTPUT`              |
+| OutputFilePath   | Output file path                              | string                                                                   | `./app.log`                | `LOGGER_OUTPUT_FILE_PATH`    |
+| OutputFormat     | Output format.                                | `logfmt`, `logfmt_no_color`, `json`                                      | `logfmt_no_color`          | `LOGGER_OUTPUT_FORMAT`       |
+| StdoutFormat     | Stdout format.                                | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_STDOUT_FORMAT`       |
+| StderrFormat     | Stderr format.                                | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_STDERR_FORMAT`       |
+| FileFormat       | File format.                                  | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_FILE_FORMAT`         |
+| Level            | Log level.                                    | `LOGGER_LEVEL`                                                           |
+| RotateEnabled    | Log rotation enabled                          | `true`, `false`                                                          | `true`                     | `LOGGER_ROTATE_ENABLED`      |
+| RotateMaxSizeMB  | Log rotation max size in MB                   | > 0                                                                      | `10`                       | `LOGGER_ROTATE_MAX_SIZE_MB`  |
+| RotateMaxBackups | Log rotation max backups                      | > 0                                                                      | `3`                        | `LOGGER_ROTATE_MAX_BACKUPS`  |
+| RotateMaxAgeDays | Log rotation max age in days                  | > 0                                                                      | `28`                       | `LOGGER_ROTATE_MAX_AGE_DAYS` |
+| RotateCompress   | Log rotation compress                         | `true`, `false`                                                          | `true`                     | `LOGGER_ROTATE_COMPRESS`     |
+| InjectTraceInfo  | Inject trace info                             | `true`, `false`                                                          | `true`                     | `LOGGER_INJECT_TRACE_INFO`   |
 
 
 
