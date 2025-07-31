@@ -10,6 +10,7 @@ A simple, fast, and highly configurable Go logging package. This package leverag
 
 ## Features
 - **Flexible Output Destinations:** Write logs to `stdout`, `stderr`, and/or `files`, individually or simultaneously.
+- **Log Rotation:** When writing to files, automatically handles log file rotation, compression, and retention using `lumberjack`.
 - **Customizable Output Formats:** Each output destination can have its own format: `logfmt`, `logfmt without color`, or `json`.
 - **Nested Loggers:** Create hierarchical logger structures using the Sub method for more organized and contextual logging.
 - **OpenTelemetry Integration:** Easily embed Trace and Span IDs into your logs for better observability with OpenTelemetry.
