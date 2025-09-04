@@ -19,6 +19,7 @@ type Logger struct {
 	zlog         *zerolog.Logger
 	serviceNames []string
 	cfg          *Config
+	file         io.WriteCloser
 }
 
 func New(cfg *Config) (*Logger, error) {
@@ -51,6 +52,13 @@ func New(cfg *Config) (*Logger, error) {
 	lg.zlog = zlog
 
 	return lg, nil
+}
+
+func (l *Logger) Close() error {
+	if l.file != nil {
+		return l.file.Close()
+	}
+	return nil
 }
 
 func (l *Logger) Sub(serviceName string) *Logger {
@@ -158,11 +166,11 @@ func (l *Logger) initWriters() ([]io.Writer, error) {
 			if format == "" {
 				return nil, fmt.Errorf("file and output format is empty")
 			}
-			f, err := l.initFile()
+			err := l.initFile()
 			if err != nil {
 				return nil, fmt.Errorf("initFile: %w", err)
 			}
-			wr = l.format(format, f)
+			wr = l.format(format, l.file)
 		}
 		writers = append(writers, wr)
 	}
@@ -192,21 +200,23 @@ func (l *Logger) getZerologLevel(level string) zerolog.Level {
 	}
 }
 
-func (l *Logger) initFile() (io.Writer, error) {
+func (l *Logger) initFile() error {
 	if l.cfg.RotateEnabled {
-		return &lumberjack.Logger{
+		l.file = &lumberjack.Logger{
 			Filename:   l.cfg.OutputFilePath,
 			MaxSize:    l.cfg.RotateMaxSizeMB,
 			MaxBackups: l.cfg.RotateMaxBackups,
 			MaxAge:     l.cfg.RotateMaxAgeDays,
 			Compress:   l.cfg.RotateCompress,
-		}, nil
+		}
+		return nil
 	}
-	f, err := os.OpenFile(l.cfg.OutputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	var err error
+	l.file, err = os.OpenFile(l.cfg.OutputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("os.OpenFile: %w", err)
+		return fmt.Errorf("os.OpenFile: %w", err)
 	}
-	return f, nil
+	return nil
 }
 
 func (l *Logger) addTraceAndSpanID(ctx context.Context, e *zerolog.Event) *zerolog.Event {

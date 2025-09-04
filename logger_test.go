@@ -24,6 +24,7 @@ func TestLogger_WithEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer lg.Close()
 	lg.Info(ctx, "test")
 	lg.Debug(ctx, "test", "key", "value")
 }
@@ -34,6 +35,7 @@ func TestLogger_WithDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer lg.Close()
 	lg.Info(ctx, "test")
 	lg.Debug(ctx, "test", "key", "value")
 }
