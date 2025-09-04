@@ -41,6 +41,7 @@ import "github.com/ksckaan1/logger"
   if err != nil {
     panic(err)
   }
+  defer lg.Close()
   ```
 
 - Using environment variables:
@@ -50,6 +51,7 @@ import "github.com/ksckaan1/logger"
   if err != nil {
     panic(err)
   }
+  defer lg.Close()
   ```
 
 - Or with custom config:
@@ -62,6 +64,7 @@ import "github.com/ksckaan1/logger"
   if err != nil {
     panic(err)
   }
+  defer lg.Close()
   ```
 
 ### Print Logs
@@ -149,10 +152,3 @@ sublg.Info(ctx, "this is an info message")
 | RotateMaxAgeDays | Log rotation max age in days                  | > 0                                                                      | `28`                       | `LOGGER_ROTATE_MAX_AGE_DAYS` |
 | RotateCompress   | Log rotation compress                         | `true`, `false`                                                          | `true`                     | `LOGGER_ROTATE_COMPRESS`     |
 | InjectTraceInfo  | Inject trace info                             | `true`, `false`                                                          | `true`                     | `LOGGER_INJECT_TRACE_INFO`   |
-
-
-
-
-
-
-
