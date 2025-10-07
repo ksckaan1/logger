@@ -145,7 +145,7 @@ sublg.Info(ctx, "this is an info message")
 | StdoutFormat     | Stdout format.                                | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_STDOUT_FORMAT`       |
 | StderrFormat     | Stderr format.                                | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_STDERR_FORMAT`       |
 | FileFormat       | File format.                                  | `logfmt`, `logfmt_no_color`, `json`                                      | inherits from OutputFormat | `LOGGER_FILE_FORMAT`         |
-| Level            | Log level.                                    | `LOGGER_LEVEL`                                                           |
+| Level            | Log level.                                    | `disabled`, `trace`, `debug`, `info`, `warning`, `error`, `fatal`, `panic` | `debug` | `LOGGER_LEVEL` |                                                          |
 | RotateEnabled    | Log rotation enabled                          | `true`, `false`                                                          | `true`                     | `LOGGER_ROTATE_ENABLED`      |
 | RotateMaxSizeMB  | Log rotation max size in MB                   | > 0                                                                      | `10`                       | `LOGGER_ROTATE_MAX_SIZE_MB`  |
 | RotateMaxBackups | Log rotation max backups                      | > 0                                                                      | `3`                        | `LOGGER_ROTATE_MAX_BACKUPS`  |
