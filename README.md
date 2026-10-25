@@ -13,7 +13,7 @@ A simple, fast, and highly configurable Go logging package. This package leverag
 - **Log Rotation:** When writing to files, automatically handles log file rotation, compression, and retention using `lumberjack`.
 - **Customizable Output Formats:** Each output destination can have its own format: `logfmt`, `logfmt without color`, or `json`.
 - **Nested Loggers:** Create hierarchical logger structures using the Sub method for more organized and contextual logging.
-- **OpenTelemetry Integration:** Easily embed Trace and Span IDs into your logs for better observability with OpenTelemetry.
+- **OpenTelemetry Integration:** Sends every log record to the global OpenTelemetry logger provider — message, severity, all log fields, the service name, the caller and the trace/span IDs as attributes. Trace and Span IDs are also embedded into the textual output.
 - **Configurable Log Levels:** Define the logging level (e.g., `info`, `debug`, `error`) for your logger.
 
 ## Installation

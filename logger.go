@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -20,6 +23,7 @@ type Logger struct {
 	serviceNames []string
 	cfg          *Config
 	file         io.WriteCloser
+	otel         *otelEmitter
 }
 
 func New(cfg *Config) (*Logger, error) {
@@ -40,7 +44,8 @@ func New(cfg *Config) (*Logger, error) {
 	}
 
 	lg := &Logger{
-		cfg: cfg,
+		cfg:  cfg,
+		otel: newOtelEmitter(cfg.ServiceName),
 	}
 	if cfg.ServiceName != "" {
 		lg.serviceNames = append(lg.serviceNames, cfg.ServiceName)
@@ -70,45 +75,113 @@ func (l *Logger) Sub(serviceName string) *Logger {
 		zlog:         l.zlog,
 		serviceNames: serviceNames,
 		cfg:          l.cfg,
+		otel:         l.otel,
 	}
 }
 
 func (l *Logger) Trace(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Trace(), message, fields...)
+	l.log(ctx, zerolog.TraceLevel, l.zlog.Trace(), message, fields...)
 }
 
 func (l *Logger) Debug(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Debug(), message, fields...)
+	l.log(ctx, zerolog.DebugLevel, l.zlog.Debug(), message, fields...)
 }
 
 func (l *Logger) Info(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Info(), message, fields...)
+	l.log(ctx, zerolog.InfoLevel, l.zlog.Info(), message, fields...)
 }
 
 func (l *Logger) Warn(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Warn(), message, fields...)
+	l.log(ctx, zerolog.WarnLevel, l.zlog.Warn(), message, fields...)
 }
 
 func (l *Logger) Error(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Error(), message, fields...)
+	l.log(ctx, zerolog.ErrorLevel, l.zlog.Error(), message, fields...)
 }
 
 func (l *Logger) Fatal(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Fatal(), message, fields...)
+	l.log(ctx, zerolog.FatalLevel, l.zlog.Fatal(), message, fields...)
 }
 
 func (l *Logger) Panic(ctx context.Context, message string, fields ...any) {
-	l.log(ctx, l.zlog.Panic(), message, fields...)
+	l.log(ctx, zerolog.PanicLevel, l.zlog.Panic(), message, fields...)
 }
 
-func (l *Logger) log(ctx context.Context, e *zerolog.Event, message string, fields ...any) {
-	if len(l.serviceNames) != 0 {
-		e.Str("service", strings.Join(l.serviceNames, "/"))
+func (l *Logger) log(ctx context.Context, level zerolog.Level, e *zerolog.Event, message string, fields ...any) {
+	if !e.Enabled() {
+		return
 	}
+
+	var attrs []attribute.KeyValue
+
+	if len(l.serviceNames) != 0 {
+		service := strings.Join(l.serviceNames, "/")
+		e.Str("service", service)
+		attrs = append(attrs, attribute.String("service", service))
+	}
+
 	if l.cfg.InjectTraceInfo {
 		e = l.addTraceAndSpanID(ctx, e)
+		attrs = append(attrs, traceAttrs(ctx)...)
 	}
+
+	attrs = append(attrs, otelAttrs(fields)...)
+	if caller, ok := callerAttr(); ok {
+		attrs = append(attrs, caller)
+	}
+
+	// Emit before Msg, because Fatal and Panic terminate the process in Msg.
+	l.otel.emit(ctx, level, message, attrs)
+
 	e.Fields(fields).Msg(message)
+}
+
+// callerAttr mirrors the caller field zerolog adds, as an OTel attribute.
+//
+// The stack is walked instead of using a fixed skip count, because the small
+// level methods get inlined into the caller, which would shift a fixed count.
+func callerAttr() (attribute.KeyValue, bool) {
+	pc, file, line, ok := callerFrame()
+	if !ok {
+		return attribute.KeyValue{}, false
+	}
+	return attribute.String(zerolog.CallerFieldName, zerolog.CallerMarshalFunc(pc, file, line)), true
+}
+
+// loggerPkg is the runtime prefix of this package, e.g.
+// "github.com/ksckaan1/logger." including the trailing dot.
+var loggerPkg = reflect.TypeOf(Logger{}).PkgPath() + "."
+
+// isLoggerFrame reports whether name belongs to this logger's own call path.
+// Only the Logger methods and helpers are skipped, so that test or caller
+// functions living in the same package are still reported.
+func isLoggerFrame(name string) bool {
+	if !strings.HasPrefix(name, loggerPkg) {
+		return false
+	}
+	return strings.Contains(name, "(*Logger).") ||
+		strings.HasSuffix(name, ".callerAttr") ||
+		strings.HasSuffix(name, ".callerFrame")
+}
+
+func callerFrame() (uintptr, string, int, bool) {
+	pcs := make([]uintptr, 16)
+	n := runtime.Callers(0, pcs)
+
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		f, more := frames.Next()
+
+		// Skip the runtime and this logger; the first other frame is the code
+		// that called the logger.
+		if !strings.HasPrefix(f.Function, "runtime.") && !isLoggerFrame(f.Function) {
+			return f.PC, f.File, f.Line, true
+		}
+
+		if !more {
+			return 0, "", 0, false
+		}
+	}
 }
 
 func (l *Logger) initZerolog() (*zerolog.Logger, error) {
@@ -123,8 +196,7 @@ func (l *Logger) initZerolog() (*zerolog.Logger, error) {
 		With().
 		Timestamp().
 		CallerWithSkipFrameCount(4).
-		Logger().
-		Hook(newOtelHook(l.cfg.ServiceName))
+		Logger()
 	return &zlog, nil
 }
 
@@ -218,6 +290,19 @@ func (l *Logger) initFile() error {
 		return fmt.Errorf("os.OpenFile: %w", err)
 	}
 	return nil
+}
+
+func traceAttrs(ctx context.Context) []attribute.KeyValue {
+	spanCtx := trace.SpanContextFromContext(ctx)
+
+	var attrs []attribute.KeyValue
+	if spanCtx.HasSpanID() {
+		attrs = append(attrs, attribute.String("span_id", spanCtx.SpanID().String()))
+	}
+	if spanCtx.HasTraceID() {
+		attrs = append(attrs, attribute.String("trace_id", spanCtx.TraceID().String()))
+	}
+	return attrs
 }
 
 func (l *Logger) addTraceAndSpanID(ctx context.Context, e *zerolog.Event) *zerolog.Event {
