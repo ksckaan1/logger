@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/contrib/bridges/otelzerolog"
 	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -125,7 +124,7 @@ func (l *Logger) initZerolog() (*zerolog.Logger, error) {
 		Timestamp().
 		CallerWithSkipFrameCount(4).
 		Logger().
-		Hook(otelzerolog.NewHook(l.cfg.ServiceName))
+		Hook(newOtelHook(l.cfg.ServiceName))
 	return &zlog, nil
 }
 
