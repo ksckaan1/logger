@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/contrib/bridges/otelzerolog"
 	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -123,7 +124,8 @@ func (l *Logger) initZerolog() (*zerolog.Logger, error) {
 		With().
 		Timestamp().
 		CallerWithSkipFrameCount(4).
-		Logger()
+		Logger().
+		Hook(otelzerolog.NewHook(l.cfg.ServiceName))
 	return &zlog, nil
 }
 
@@ -212,7 +214,7 @@ func (l *Logger) initFile() error {
 		return nil
 	}
 	var err error
-	l.file, err = os.OpenFile(l.cfg.OutputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	l.file, err = os.OpenFile(l.cfg.OutputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("os.OpenFile: %w", err)
 	}
